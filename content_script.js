@@ -1,4 +1,4 @@
-window.addEventListener("message", (event) => {
-    console.log(event)
-    return true
+chrome.runtime.onMessage.addListener((message, callback) => {
+console.log(message)
+
 });

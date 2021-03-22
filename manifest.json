@@ -12,7 +12,8 @@
    "content_scripts": [
    {
      "matches": ["*://twitter.com/*"],
-     "js": ["content_script.js"]
+     "js": ["content_script.js"],
+     "run_at": "document_end"
    }
  ],
   "manifest_version": 2,

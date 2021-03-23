@@ -1,7 +1,21 @@
+from collections import defaultdict
 import requests
 import os
 from flask import Flask, jsonify
 from flask_cors import CORS
+import botometer
+
+rapidapi_key = os.environ.get("RAPID_API_KEY")
+
+twitter_app_auth = {
+    'consumer_key': os.environ.get("TWITTER_API_KEY"),
+    'consumer_secret': os.environ.get("TWITTER_API_SECRET"),
+    'access_token': os.environ.get("TWITTER_ACCESS_TOKEN"),
+    'access_token_secret': os.environ.get("TWITTER_ACCESS_TOKEN_SECRET"),
+  }
+bom = botometer.Botometer(wait_on_ratelimit=True,
+                          rapidapi_key=rapidapi_key,
+                          **twitter_app_auth)
 
 app = Flask(__name__)
 
@@ -35,16 +49,35 @@ def get_followers(username):
     return followers
 
 
+def check_accounts(followers):
+    results = defaultdict(int)
+    try:
+        for screen_name, scores in bom.check_accounts_in(followers):
+            print(f'screen_name: {screen_name}')
+            print(f'scores: {scores}')
+            if scores:
+                e_cap = scores.get('cap').get('english')
+                u_cap = scores.get('cap').get('universal')
+                cap_mean = (e_cap + u_cap) / 2
+                if cap_mean >= 0.8:
+                    results['bot'] += 1
+                elif 0.5 <= cap_mean < 0.8:
+                    results['unsure'] += 1
+                else:
+                    results['human'] += 1
+            else:
+                results['unsure'] += 1
+    except:
+        results['unsure'] += 1
+    return results
+
+
 @app.route("/username/<username>", methods=['GET'])
 def calculate_human_likelihood(username):
-    print(username)
     followers = get_followers(username)
-    print(len(followers))
-
-
-
-
-    return jsonify(followers="ok")
+    results = check_accounts([int(f) for f in followers])
+    print(results)
+    return jsonify(**results)
 
 
 if __name__ == '__main__':
